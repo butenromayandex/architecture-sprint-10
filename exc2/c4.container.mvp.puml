@@ -1,0 +1,81 @@
+@startuml
+title Медикаменте Container Diagram
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/butenromayandex/C4/main/C4_Component.puml
+
+Person(Patient, "Пациент")
+Person(Receptionist, "Сотрудник ресепшена")
+Person(Specialist, "Специалист")
+Person(Cashier, "Кассир")
+Person(Accountant, "Бухгалтер")
+Person(WarehouseWorker, "Сотрудник склада")
+Person(TechDir, "Технический директор")
+
+Container_Boundary(MedicamenteSystem, "Medicamente System") {
+  Container(GateWay, "Api Gateway", "Kong", "Api Gateway для всех систем Медикаменте")
+  Container(MobileApp, "Client Mobile App", "React Native", "Приложение для клиентов")
+  Container(ClientsPortal, "Client Portal", "React", "Портал для клиентов")
+  Container(ApiPortal, "Api for clients systems", "Nodejs", "API Портала для клиентов")
+  ContainerDb(PortalDb, "Portal Db", "Postgres", "Stores user registraion information, hased auth credentials, access logs, etc.")
+
+  Container(Crm, "CRM System", "Bitrix24", "CRM система")
+  ContainerDb(CrmDatabase, "CRM Database", "MySQL", "База данных для CRM системы")
+
+  Container(Accounting, "Accounting", "1C", "1С Бухгалтерия предприятия")
+  Container(Inventory, "Inventory", "1C", "1С Торговля и склад")
+  Container(EMR, "Emr", "OpenEMR", "ЭМК система")
+  Container(PaymentGateway, "PaymentGateway", "Stripe", "API Платежного шлюза (Stripe)")
+
+  Container(AD, "AD Server", "AD Server", "Active Directory")
+  Container(Ldap, "LDAP Server", "LDAP Server")
+  Container(TagService, "Tag service", "Apache Atlas", "Система тегирования")
+
+  Container(Monitoring, "Monitoring", "ELK", "Система мониторинга и аудита")
+
+  ContainerDb(FileStorage, "File Storage", "S3", "Система хранения данных")
+}
+
+System_Ext(lab, "Лаборатория", "Внешняя лаборатория для забора анализов")
+System_Ext(payment, "Банк", "External bank for processing payments")
+
+Patient --> MobileApp : Запись на прием (tag: personal)
+Patient --> ClientsPortal : Запись на прием (tag: personal)
+
+MobileApp --> GateWay: Обработка запросов
+ClientsPortal --> GateWay: Обработка запросов
+GateWay --> ApiPortal
+GateWay --> Crm
+GateWay --> EMR
+
+Cashier --> PaymentGateway : Обработка платежей
+PaymentGateway -> payment : Обработка платежей
+
+Receptionist --> GateWay : Подтверждение записи (tag: personal)
+Specialist --> GateWay : Доступ к медицинским картам (tag: confidential)
+Specialist --> EMR : Интеграция с ЭМК
+ApiPortal --> EMR : Интеграция с ЭМК
+ApiPortal --> Crm : Интеграция с Bitrix24
+ApiPortal --> PaymentGateway : Обработка платежей
+
+Accountant --> Accounting : Учет финансовых данных (tag: financial)
+WarehouseWorker --> Inventory : Учет ТМЦ (tag: tmz)
+
+Accounting --> FileStorage : Доступ к данным (tag: financial)
+Inventory --> FileStorage: Доступ к данным (tag: tmz)
+
+TechDir --> Monitoring: Мониторинг систем
+TechDir --> Ldap: : Управление атрибутами доступа
+TechDir --> AD: : Управление пользователями и доступом
+
+Crm --> CrmDatabase
+ApiPortal --> PortalDb : Хранение данных (tag: confidential, personal)
+
+FileStorage --> TagService : Интеграция с тегированием
+PortalDb --> TagService : Интеграция с тегированием
+CrmDatabase --> TagService : Интеграция с тегированием
+
+
+ApiPortal --> lab : Получение результатов анализов
+@enduml
